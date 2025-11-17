@@ -35,7 +35,11 @@ void internal_printf(const char* format, ...){
     char* intBuffer = NULL;
     va_list args;
     va_start(args, format);
-    buffersize = MSVCRT$vsnprintf(NULL, 0, format, args); // +1 because vsprintf goes to buffersize-1 , and buffersize won't return with the null
+    buffersize = MSVCRT$vsnprintf(NULL, 0, format, args);
+	if (buffersize < 0) {
+    	va_end(args);
+    	return;
+	} 
     va_end(args);
     
     // vsnprintf will return -1 on encoding failure (ex. non latin characters in Wide string)
@@ -123,7 +127,7 @@ BOOL intstrcmp(LPCSTR szLibrary, LPCSTR sztarget)
         }
         pos++;
     }
-    if(szLibrary[pos] | sztarget[pos]) // if either of these down't equal null then they can't match
+	if(szLibrary[pos] || sztarget[pos]) // if either of these down't equal null then they can't match
         {goto end;}
     bmatch = TRUE;
 
